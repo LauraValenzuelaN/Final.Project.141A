@@ -1,0 +1,412 @@
+---
+title: "Final Project"
+author: "Laura Valenzuela, ID: 919202591"
+date: "3/14/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(eval = TRUE, echo = TRUE, fig.align='center')
+library(tidyverse)
+```
+
+## Introduction
+
+In this report we are going to use COVID-19 data set taken from the ‘World Health Organization’ (WHO) website. The dataset includes countries, the country code that represents a code for each country, the WHO region that represents the region the country is in, we have date reported which starts from "2020-01-03" until the present day, it includes new cases, cumulative cases, new deaths and cumulative deaths about the disease. This data gets updated constantly. Also, in the data set I included more variables which are month, weeks, and omicron, where omicron is $i = 0, 1$. 1 being where I am assuming the variant raised the new cases variable, and 0 is everything else.
+
+After looking at the WHO data set and other websites I decided that the question of interest that I wanted to explore was: **Is the winter break of 2021/2022 associated with the increase of COVID cases as well as the outbreak of the Omicron variant?** To answer this question we will be focusing on the data between September 2021 through February 2022, where the winter break will be focused on December, 20th, 2021 through January, 20th, 2022. This includes the holiday break plus around two weeks after the break because the virus can take longer to be detected. We will also use the same dates but from the year prior, meaning September 2020 through February 2021 to see if there is an obvious difference between the years that can help answering the question of interest. 
+  
+  
+## Background
+
+COVID-19 stands for Coronavirus disease 2019 because the first known case was identified in Wuhan, China, in December 2019. And since then it has spread around the world making it a pandemic that we are still dealing with at this moment. The disease is very contagious and can cause severe acute respiratory syndrome. Symptoms can vary but the usually include fever, fatigue, cough, breathing difficulties, loss of smell and/or taste. And this symptoms can begin between one and fourteen days after being exposed to the virus. Ways to minimize and prevent it are social distancing, use of face masks covering the mouth and nose, hand washing, ventilation of indoor spaces, etc. As of today, several vaccines have been approved and have already started vaccination campaigns. The most used in United States have been Pfizer, Moderna, and Johnson and Johnson. 
+
+There have been new variants that have come from the original virus. By the end of 2021 there was an increase of cases that said to be related with the new COVID-19 variant called Omicron. As of December 20th, 2021, the Omicron variant has been detected in every state in United States of America. The CDC reported that Omicron spreads more easily than the original virus but it also said to cause less severe disease than infection with prior variants. And only a small percentage of people with this variant need hospitalization compare to the original virus. 
+
+
+## Descriptive Analysis
+
+```{r, results='hide'}
+library(gridExtra)
+library(scales)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(lme4)
+library(knitr)
+```
+
+
+*Covid data set*
+
+```{r}
+covid <- read.csv("https://covid19.who.int/WHO-COVID-19-global-data.csv")
+covid <- rename(covid, Date_reported=ï..Date_reported)
+
+covid <- covid %>% 
+  filter(WHO_region != "Other") %>% 
+  mutate(WHO_region = fct_recode(WHO_region, "Eastern Mediterranean"="EMRO","Europe" = "EURO","Africa" = "AFRO",
+                                 "Western Pacific" = "WPRO","Americas"="AMRO","South-East Asia" = "SEARO"))
+range(covid$Date_reported)
+length(unique(covid$Country))
+
+us = covid %>% filter(Country_code=="US", Date_reported>= "2021-09-01", Date_reported<= "2022-02-28")
+us.2020 = covid %>% filter(Country_code=="US", Date_reported>= "2020-09-01", Date_reported<= "2021-02-28")
+```
+
+
+
+**Graphs between September 2021 - February 2022**
+
+
+This plots start with the first Monday of the month and end with the fourth Monday of the month. This was done to get a better understanding when comparing it to the previous year, and also so we can fit the same amount of days in each graph because the days in the months can vary from one to the other. 
+
+
+```{r}
+# Spaghetti plot 2021-2022
+#September new cases
+fig.spaghetti.1 <- us %>% 
+  filter(Date_reported>= "2021-09-06", Date_reported<= "2021-09-27") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases, col= Country)) +
+  ggtitle(paste("September 2021"))+
+  geom_point(aes(x=Date, y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+#October new cases
+fig.spaghetti.2 <- us %>% 
+  filter(Date_reported>= "2021-10-04", Date_reported<= "2021-10-25") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases, col=Country)) +
+  ggtitle(paste("October 2021"))+
+  geom_point(aes(x=Date, y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+ 
+
+#November new cases
+fig.spaghetti.3 <- us %>% 
+  filter(Date_reported>= "2021-11-01", Date_reported<= "2021-11-22") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases, col=Country)) +
+  ggtitle(paste("November 2021"))+
+  geom_point(aes(x=Date, y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+#December new cases
+fig.spaghetti.4 <- us %>% 
+  filter(Date_reported>= "2021-12-06", Date_reported<= "2021-12-27") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases, col=Country)) +
+  ggtitle(paste("December 2021"))+
+  geom_point(aes(x=Date, y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+#January new cases
+fig.spaghetti.5 <- us %>% 
+  filter(Date_reported>= "2022-01-03", Date_reported<= "2022-01-24") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases,col=Country)) +
+  ggtitle(paste("January 2022"))+
+  geom_point(aes(x=Date,y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1300000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+#February new cases
+fig.spaghetti.6 <- us %>% 
+  filter(Date_reported>= "2022-02-07", Date_reported<= "2022-02-28") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases,col=Country)) +
+  ggtitle(paste("February 2022"))+
+  geom_point(aes(x=Date,y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+grid.arrange(fig.spaghetti.1, fig.spaghetti.2, nrow=2, ncol=1)
+grid.arrange(fig.spaghetti.3, fig.spaghetti.4, nrow=2, ncol=1)
+grid.arrange(fig.spaghetti.5, fig.spaghetti.6, nrow=2, ncol=1) 
+```
+
+
+What we can see from the plots above is that from September 2021 to the beginning of December 2021 the new cases of covid are consistently low compared to the to the ending of December 2021 and the whole month of January 2022, by February 2022 we can see a noticeable decrease in the new cases. By looking at these plots we might be able to make an association between the Omicron variant and the start of the winter break.
+
+
+
+```{r}
+#Label months
+us.month <- function(date) {
+  if (month(date)==09) {
+    return("September")
+  }
+  if (month(date)==10) {
+    return("October")
+  }
+  if (month(date)==11) {
+    return("November")
+  }
+  if (month(date)==12) {
+    return("December")
+  }
+  if (month(date)==01) {
+    return("January")
+  }
+  if (month(date)==02) {
+    return("February")
+  }
+  return("other")
+}
+
+us <- us %>% mutate(month = sapply(us$Date_reported, us.month))
+us.2020 <- us.2020 %>% mutate(month = sapply(us$Date_reported, us.month))
+```
+
+
+
+**Graphs between September 2020 - February 2021**
+
+
+```{r}
+## Spaghetti plot 2020-2021
+#September new cases
+fig.spaghetti.11 <- us.2020 %>% 
+  filter(Date_reported>= "2020-09-07", Date_reported<= "2020-09-28") %>% #Include more months
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases, col=Country)) +
+  ggtitle(paste("September 2020"))+
+  geom_point(aes(x=Date,y=New_cases))+
+  geom_line(aes(col=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+#October new cases
+fig.spaghetti.12 <- us.2020 %>% 
+  filter(Date_reported>= "2020-10-05", Date_reported<= "2020-10-26") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases, col=Country)) +
+  ggtitle(paste("October 2020"))+
+  geom_point(aes(x=Date,y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+#November new cases
+fig.spaghetti.13 <- us.2020 %>% 
+  filter(Date_reported>= "2020-11-02", Date_reported<= "2020-11-23") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases, col=Country)) +
+  ggtitle(paste("November 2020"))+
+  geom_point(aes(x=Date,y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+#December new cases
+fig.spaghetti.14 <- us.2020 %>% 
+  filter(Date_reported>= "2020-12-07", Date_reported<= "2020-12-28") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases, col= Country)) +
+  ggtitle(paste("December 2020"))+
+  geom_point(aes(x=Date,y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+#January new cases
+fig.spaghetti.15 <- us.2020 %>% 
+  filter(Date_reported>= "2021-01-04", Date_reported<= "2021-01-25") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases,col=Country)) +
+  ggtitle(paste("January 2021"))+
+  geom_point(aes(x=Date,y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+
+#February new cases
+fig.spaghetti.16 <- us.2020 %>% 
+  filter(Date_reported>= "2021-02-01", Date_reported<= "2021-02-22") %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases,col=Country)) +
+  ggtitle(paste("February 2021"))+
+  geom_point(aes(x=Date,y=New_cases))+
+  geom_line(aes(color=Country)) +
+  scale_y_continuous(limits=c(0,1000000), breaks= scales::breaks_width(200000))+
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+
+grid.arrange(fig.spaghetti.11, fig.spaghetti.12, nrow=2, ncol=1)
+grid.arrange(fig.spaghetti.13, fig.spaghetti.14, nrow=2, ncol=1)
+grid.arrange(fig.spaghetti.15, fig.spaghetti.16, nrow=2, ncol=1) 
+
+```
+
+
+When looking at the plots from September 2020 to February 2021, we can see a similar spike in cases during the winter break but not major compared to the outbreak that occurred in December 2021 and January 2022. So, the Omicron variant might be responsible for the spike in cases in the previous plot because we do not get the same results in these plots. 
+
+
+**Boxplots**
+  
+We made boxplots so we can have a more visual comparison between December 2021 - January 2022 and December 2020 and January 2021.
+
+
+```{r}
+#Boxplot 2021
+us.2021_month <- factor(us$month, levels = c("September", "October", "November", "December", "January", "February"))
+
+box.2021 <- ggplot(data = us, mapping = aes(x = us.2021_month, y = New_cases, color = Country)) +
+  scale_y_continuous(limits=c(0,1300000), breaks= scales::breaks_width(100000))+
+  labs(title = "", y="New cases", x="months in 2021-2022")+
+  geom_boxplot()
+
+#Boxplot 2020
+us.2020_month <- factor(us.2020$month, levels = c("September", "October", "November", "December", "January", "February"))
+
+box.2020 <- ggplot(data = us.2020, mapping = aes(x = us.2020_month, y = New_cases, xlab= "Months", color = Country)) +
+  scale_y_continuous(limits=c(0,1300000), breaks= scales::breaks_width(100000))+
+  labs(title = "", y="New cases", x="months in 2020-2021")+
+  geom_boxplot()
+
+
+box.2020
+box.2021
+```
+
+
+```{r}
+#Label in weeks
+weeks <- function(date) {
+  if ((month(date) == 9 && between(day(date), 06, 12)) 
+      || (month(date) == 10 && between(day(date), 04, 10))
+      || (month(date) == 11 && between(day(date), 01, 07))
+      || (month(date) == 12 && between(day(date), 06, 12))
+      || (month(date) == 01 && between(day(date), 03, 09))
+      || (month(date) == 02 && between(day(date), 07, 13)))
+          {
+    return("week 1")
+  }
+  if ((month(date) == 9 && between(day(date), 13, 19)) 
+      || (month(date) == 10 && between(day(date), 11, 17))
+      || (month(date) == 11 && between(day(date), 08, 14))
+      || (month(date) == 12 && between(day(date), 13, 19))
+      || (month(date) == 01 && between(day(date), 10, 16))
+      || (month(date) == 02 && between(day(date), 14, 20)))
+  {
+    return("week 2")
+  }
+  if ((month(date) == 9 && between(day(date), 20, 26)) 
+      || (month(date) == 10 && between(day(date), 18, 24))
+      || (month(date) == 11 && between(day(date), 15, 21))
+      || (month(date) == 12 && between(day(date), 20, 26))
+      || (month(date) == 01 && between(day(date), 17, 23))
+      || (month(date) == 02 && between(day(date), 21, 28)))
+  {
+    return("week 3")
+  }
+  return("other")
+}
+
+us <- us %>% mutate(week = sapply(us$Date_reported, weeks))
+```
+
+
+## Inferential and Sensitivity Analysis
+
+
+```{r}
+#Label omicron as 0 and 1
+omicron <- function(date) {
+  if ((month(date) == 12 && between(day(date), 20, 31)) 
+      || (month(date) == 01 && between(day(date), 01, 20)))
+      {
+        return(1)
+      }
+return(0)
+}
+
+us <- us %>% mutate(omicron = sapply(us$Date_reported, omicron))
+
+#Model
+model.us <- lm(New_cases ~ month + omicron, data = us)
+summary(model.us)
+
+
+#F-test
+alpha = 0.05
+
+qf(1-alpha, 6, 174)
+```
+
+
+We perform an F-test
+
+$H_0:$ there is not a relation between winter break and the omicron variant vs. $H_a:$ there is a relationship between the winter break and the omicron variant.
+
+$F = 85.46$
+
+F > 2.1510, therefore we can reject the null hypothesis at the level of significance 0.05.
+
+
+
+
+**Comparison with China, India, South Africa, United Kingdom and United States of America.**
+
+
+```{r}
+comparison.plot <- covid %>% 
+  filter(Date_reported>= "2021-09-01", Date_reported<= "2022-02-28",Country_code %in% c("US", "GB", "ZA", "CN", "IN")) %>% 
+  mutate(Date=as.Date(Date_reported)) %>%
+  ggplot(aes(x=Date,y=New_cases,col=Country)) +
+  scale_y_continuous(limits=c(0,1300000), breaks= scales::breaks_width(200000))+
+  labs(y="New cases")+
+  ggtitle(paste("Comparison between countries"))+
+  geom_line(aes(color=Country)) +
+  theme(plot.title = element_text(hjust = 0.5) ,legend.position = "right")
+comparison.plot
+```
+
+
+In this last section we are comparing the outbreak Omicron in different countries, which are China, India, South Africa, The United Kingdom, and United States. I chose these countries because some have way more population than USA and some have less. Even though, China and India have a population around one billion people, their cases are relatively low compared to the cases in United States. For china, it said in the "Bloomberg News Website" that China has firmly closed borders and has a vaccination rate of 90%, in some cities in China lockdown protocols began just before Christmas. Something that has not happened to this extent in United States which might be an indicator of why the new cases are low in China compared to United States. On the other hand, when we look at South Africa we see that it is very close to China's cases. According to "BBC News Website", South Africa's latest wave of Covid, which began in November 2021, is now declining as rapidly as it once rose and it is likely to be declared over, nationwide, in the coming days. It also said there are around 290,000 deaths that have not been confirmed as an accurate reflection of the pandemic's toll in South Africa. This can mean that if there are deaths that haven't been confirmed, there might be an assumption of new cases that weren't detected. But as said about South Africa, it looks like in these countries the Omicron variant has decreased almost as fast as it increased. Making it look like we might be at the end of this outbreak. 
+
+
+## Conclusion
+
+In this project, we took a look at the COVID-19 data set from the World Health Organization website. From this data set we extracted data mainly for United States. When we looked at the extracted data from the months September, 2021 to February, 2022, we saw an evident increase in cases around late December and in January. We made the assumption that the increased cases were a response of the Omicron variant outbreak and with a linear model regression and an F-test we were able to put more weight into that assumption. We also compared the same months but one year apart to see if the outbreak was due to Omicron. When we compare the plots we can see the difference between new cases in December and in January. In December, 2020 and January, 2021 we see an increase in cases compared to the other months but it is not considered a major increase when we see it right next to the Omicron outbreak. 
+
+After our findings, we wanted to see if this was the case in places around the world. We took a look at the new cases from China, India, South Africa, The United Kingdom and United States. We used the months from September, 2021 to December, 2022. We plot the graph and we can see that there is an increase of new cases in the majority of the countries, some are more prominent than others but United States still is the country with more new cases. This can be due to lockdowns occurring in other countries or that preventive measures are not as inforced in USA as other countries. Nevertheless, we do see that the outbreak has significantly gone down in all of the countries we explored. This might mean that we are past the Omicron outbreak as we see way fewer cases in the beginning of February. We may be able to say that the COVID-19 virus can become endemic after this outbreak, but to prove this we need more research and data.
+
+
+
+## References
+
+Harding, By Andrew. “Was South Africa Ignored over Mild Omicron Evidence?” BBC News, 20 Jan. 2022, www.bbc.com/news/world-africa-60039138.
+
+“Omicron Variant: What You Need to Know.” Centers for Disease Control and Prevention, 2 Feb. 2022, www.cdc.gov/coronavirus/2019-ncov/variants/omicron-variant.html.
+
+Wikipedia contributors. “COVID-19.” Wikipedia, 13 Mar. 2022, en.wikipedia.org/wiki/COVID-19.
+
+“‘Xi Jinping’s Covid Defense Gets Weaker With Every Omicron Case.’” Bloomberg, Bloomberg News, 18 Jan. 2022, www.bloomberg.com/news/features/2022-01-18/omicron-in-china-new-variant-weakens-xi-jinping-s-covid-policies.
+
+## Acknowledgements
+
+Professor Chen for providing the data and an outline for the project, and for his feedback. 
+Professor Wang for providing answers to common questions on the project.
+Classmates for providing feedback on the report and roadmap. 
